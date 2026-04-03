@@ -1,0 +1,554 @@
+// K-Track 后端 Prisma Schema
+// 14 张核心业务表
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== 用户与企业 ====================
+
+model User {
+  id            Int       @id @default(autoincrement())
+  phone         String    @unique @db.VarChar(20)
+  password      String?   @db.VarChar(255)
+  wechatOpenid  String?   @unique @map("wechat_openid") @db.VarChar(64)
+  wechatUnionid String?   @map("wechat_unionid") @db.VarChar(64)
+  displayName   String?   @map("display_name") @db.VarChar(100)
+  avatarUrl     String?   @map("avatar_url") @db.VarChar(500)
+  bio           String?   @db.VarChar(1000)
+  skills        Json?     // JSON array of skill strings
+  experience    String?   @db.VarChar(2000)
+  education     String?   @db.VarChar(500)
+  location      String?   @db.VarChar(200)
+  hourlyRate    Decimal?  @map("hourly_rate") @db.Decimal(10, 2)
+  role          UserRole
+  status        UserStatus @default(active)
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  // 关系
+  enterprise         Enterprise?
+  applications       Application[]
+  progressUpdates    ProgressUpdate[]
+  sentMessages       Message[]          @relation("sender")
+  receivedMessages   Message[]          @relation("receiver")
+  transactionLogs    TransactionLog[]
+  enterpriseMembers  EnterpriseMember[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  freelancer
+  enterprise
+  admin
+}
+
+enum UserStatus {
+  active
+  suspended
+  pending_kyc
+}
+
+model Enterprise {
+  id            Int              @id @default(autoincrement())
+  userId        Int              @unique @map("user_id")
+  companyName   String           @map("company_name") @db.VarChar(200)
+  licenseNo     String?          @map("license_no") @db.VarChar(50)
+  licenseImage  String?          @map("license_image") @db.VarChar(500)
+  contactPerson String?          @map("contact_person") @db.VarChar(50)
+  contactPhone  String?          @map("contact_phone") @db.VarChar(20)
+  address       String?          @db.VarChar(500)
+  taxMode       TaxMode          @default(individual) @map("tax_mode")
+  status        EnterpriseStatus @default(pending)
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  // 关系
+  user               User               @relation(fields: [userId], references: [id])
+  tasks              Task[]
+  account            EnterpriseAccount?
+  members            EnterpriseMember[]
+  roles              Role[]
+  invoiceConfigs     InvoiceConfig[]
+  talentPool         TalentPool[]
+  transactionOrders  TransactionOrder[]
+  invoices           Invoice[]
+  fundFlows          FundFlow[]
+
+  @@map("enterprises")
+}
+
+enum EnterpriseStatus {
+  pending
+  verified
+  rejected
+}
+
+enum TaxMode {
+  individual  // 增值税个人承担
+  enterprise  // 增值税企业承担
+}
+
+// ==================== 任务体系 ====================
+
+model Task {
+  id                Int        @id @default(autoincrement())
+  enterpriseId      Int        @map("enterprise_id")
+  name              String     @db.VarChar(200)
+  type              String?    @db.VarChar(50)
+  description       String?    @db.Text
+  requirements      Json?
+  peopleNeeded      Int        @default(1) @map("people_needed")
+  budget            Decimal    @db.Decimal(12, 2)
+  duration          String?    @db.VarChar(50)
+  location          String?    @db.VarChar(100)
+  status            TaskStatus @default(draft)
+  aiGenerated       Boolean    @default(false) @map("ai_generated")
+  aiConversationId  String?    @map("ai_conversation_id") @db.VarChar(64)
+  appliedCount      Int        @default(0) @map("applied_count")
+  confirmedCount    Int        @default(0) @map("confirmed_count")
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+
+  // 关系
+  enterprise        Enterprise         @relation(fields: [enterpriseId], references: [id])
+  applications      Application[]
+  progressUpdates   ProgressUpdate[]
+  transactionOrder  TransactionOrder?
+  messages          Message[]
+
+  @@map("tasks")
+}
+
+enum TaskStatus {
+  draft
+  pending_audit
+  open
+  in_progress
+  waiting_confirmation
+  completed
+  cancelled
+}
+
+model Application {
+  id            Int               @id @default(autoincrement())
+  taskId        Int               @map("task_id")
+  freelancerId  Int               @map("freelancer_id")
+  status        ApplicationStatus @default(pending)
+  coverLetter   String?           @map("cover_letter") @db.Text
+  quotedPrice   Decimal?          @map("quoted_price") @db.Decimal(12, 2)
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  // 关系
+  task          Task @relation(fields: [taskId], references: [id])
+  freelancer    User @relation(fields: [freelancerId], references: [id])
+
+  @@unique([taskId, freelancerId])
+  @@map("applications")
+}
+
+enum ApplicationStatus {
+  pending
+  accepted
+  rejected
+  withdrawn
+}
+
+model ProgressUpdate {
+  id            Int      @id @default(autoincrement())
+  taskId        Int      @map("task_id")
+  freelancerId  Int      @map("freelancer_id")
+  content       String   @db.Text
+  mediaUrls     Json?    @map("media_urls")
+  wearableData  Json?    @map("wearable_data")
+  source        String   @default("upload") @db.VarChar(20) // upload | api | wearable
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // 关系
+  task          Task @relation(fields: [taskId], references: [id])
+  freelancer    User @relation(fields: [freelancerId], references: [id])
+
+  @@map("progress_updates")
+}
+
+// ==================== 交易中心 ====================
+
+model TransactionOrder {
+  id            Int               @id @default(autoincrement())
+  orderNo       String            @unique @map("order_no") @db.VarChar(32)
+  taskId        Int               @unique @map("task_id")
+  enterpriseId  Int               @map("enterprise_id")
+  freelancerId  Int?              @map("freelancer_id")
+  totalAmount   Decimal           @map("total_amount") @db.Decimal(12, 2)
+  platformFee   Decimal           @default(0) @map("platform_fee") @db.Decimal(12, 2)
+  taxAmount     Decimal           @default(0) @map("tax_amount") @db.Decimal(12, 2)
+  netAmount     Decimal           @default(0) @map("net_amount") @db.Decimal(12, 2)
+  status        TransactionStatus @default(pending_payment)
+  contractStatus String          @default("pending") @map("contract_status") @db.VarChar(20) // pending | signed
+  signedAt      DateTime?         @map("signed_at")
+  riskStatus    String            @default("none") @map("risk_status") @db.VarChar(20) // none | passed | blocked
+  riskReason    String?           @map("risk_reason") @db.VarChar(200)
+  payFailReason String?           @map("pay_fail_reason") @db.VarChar(200)
+  receiptUrl    String?           @map("receipt_url") @db.VarChar(500)
+  remark        String?           @db.VarChar(500)
+  paidAt        DateTime?         @map("paid_at")
+  settledAt     DateTime?         @map("settled_at")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  // 关系
+  task          Task              @relation(fields: [taskId], references: [id])
+  enterprise    Enterprise        @relation(fields: [enterpriseId], references: [id])
+  logs          TransactionLog[]
+  fundFlows     FundFlow[]
+  invoices      Invoice[]
+
+  @@map("transaction_orders")
+}
+
+enum TransactionStatus {
+  pending_payment
+  escrowed
+  in_progress
+  pending_acceptance
+  settled
+  completed
+  refunded
+  cancelled
+}
+
+model TransactionLog {
+  id          Int      @id @default(autoincrement())
+  orderId     Int      @map("order_id")
+  action      String   @db.VarChar(50)
+  operatorId  Int      @map("operator_id")
+  remark      String?  @db.VarChar(500)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // 关系
+  order       TransactionOrder @relation(fields: [orderId], references: [id])
+  operator    User             @relation(fields: [operatorId], references: [id])
+
+  @@map("transaction_logs")
+}
+
+// ==================== 财务中心 ====================
+
+model EnterpriseAccount {
+  id              Int      @id @default(autoincrement())
+  enterpriseId    Int      @unique @map("enterprise_id")
+  balance         Decimal  @default(0) @db.Decimal(14, 2)
+  frozenAmount    Decimal  @default(0) @map("frozen_amount") @db.Decimal(14, 2)
+  totalRecharged  Decimal  @default(0) @map("total_recharged") @db.Decimal(14, 2)
+  totalSpent      Decimal  @default(0) @map("total_spent") @db.Decimal(14, 2)
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // 关系
+  enterprise      Enterprise @relation(fields: [enterpriseId], references: [id])
+
+  @@map("enterprise_accounts")
+}
+
+model FundFlow {
+  id              Int          @id @default(autoincrement())
+  enterpriseId    Int          @map("enterprise_id")
+  type            FundFlowType
+  amount          Decimal      @db.Decimal(12, 2)
+  balanceAfter    Decimal      @map("balance_after") @db.Decimal(14, 2)
+  relatedOrderId  Int?         @map("related_order_id")
+  remark          String?      @db.VarChar(500)
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  // 关系
+  enterprise      Enterprise        @relation(fields: [enterpriseId], references: [id])
+  relatedOrder    TransactionOrder?  @relation(fields: [relatedOrderId], references: [id])
+
+  @@map("fund_flows")
+}
+
+enum FundFlowType {
+  recharge
+  payment
+  escrow
+  release
+  refund
+  fee
+  withdrawal
+}
+
+model Invoice {
+  id            Int           @id @default(autoincrement())
+  enterpriseId  Int           @map("enterprise_id")
+  orderId       Int?          @map("order_id")
+  invoiceNo     String?       @map("invoice_no") @db.VarChar(50)
+  amount        Decimal       @db.Decimal(12, 2)
+  type          InvoiceType   @default(ordinary)
+  title         String        @db.VarChar(200)
+  taxNo         String        @map("tax_no") @db.VarChar(50)
+  status        InvoiceStatus @default(pending)
+  pdfUrl        String?       @map("pdf_url") @db.VarChar(500)
+  appliedAt     DateTime      @default(now()) @map("applied_at")
+  issuedAt      DateTime?     @map("issued_at")
+
+  // 关系
+  enterprise    Enterprise        @relation(fields: [enterpriseId], references: [id])
+  order         TransactionOrder? @relation(fields: [orderId], references: [id])
+
+  @@map("invoices")
+}
+
+enum InvoiceType {
+  ordinary
+  special
+}
+
+enum InvoiceStatus {
+  pending
+  processing
+  issued
+  rejected
+  cancelled
+}
+
+model InvoiceConfig {
+  id            Int      @id @default(autoincrement())
+  enterpriseId  Int      @map("enterprise_id")
+  title         String   @db.VarChar(200)
+  taxNo         String   @map("tax_no") @db.VarChar(50)
+  bankName      String?  @map("bank_name") @db.VarChar(100)
+  bankAccount   String?  @map("bank_account") @db.VarChar(50)
+  address       String?  @db.VarChar(300)
+  phone         String?  @db.VarChar(20)
+  isDefault     Boolean  @default(false) @map("is_default")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // 关系
+  enterprise    Enterprise @relation(fields: [enterpriseId], references: [id])
+
+  @@map("invoice_configs")
+}
+
+// ==================== 系统中心 ====================
+
+model Role {
+  id            Int      @id @default(autoincrement())
+  enterpriseId  Int      @map("enterprise_id")
+  name          String   @db.VarChar(50)
+  permissions   Json
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // 关系
+  enterprise    Enterprise         @relation(fields: [enterpriseId], references: [id])
+  members       EnterpriseMember[]
+
+  @@map("roles")
+}
+
+model EnterpriseMember {
+  id            Int          @id @default(autoincrement())
+  enterpriseId  Int          @map("enterprise_id")
+  userId        Int          @map("user_id")
+  roleId        Int          @map("role_id")
+  status        MemberStatus @default(active)
+  joinedAt      DateTime     @default(now()) @map("joined_at")
+
+  // 关系
+  enterprise    Enterprise @relation(fields: [enterpriseId], references: [id])
+  user          User       @relation(fields: [userId], references: [id])
+  role          Role       @relation(fields: [roleId], references: [id])
+
+  @@unique([enterpriseId, userId])
+  @@map("enterprise_members")
+}
+
+enum MemberStatus {
+  active
+  disabled
+}
+
+model Message {
+  id              Int         @id @default(autoincrement())
+  senderId        Int?        @map("sender_id")
+  receiverId      Int         @map("receiver_id")
+  type            MessageType
+  title           String?     @db.VarChar(200)
+  content         String      @db.Text
+  isRead          Boolean     @default(false) @map("is_read")
+  relatedTaskId   Int?        @map("related_task_id")
+  createdAt       DateTime    @default(now()) @map("created_at")
+
+  // 关系
+  sender          User?   @relation("sender", fields: [senderId], references: [id])
+  receiver        User    @relation("receiver", fields: [receiverId], references: [id])
+  relatedTask     Task?   @relation(fields: [relatedTaskId], references: [id])
+
+  @@map("messages")
+}
+
+enum MessageType {
+  system
+  task
+  chat
+}
+
+model TalentPool {
+  id            Int            @id @default(autoincrement())
+  enterpriseId  Int            @map("enterprise_id")
+  freelancerId  Int            @map("freelancer_id")
+  tag           TalentPoolTag  @default(favorite)
+  note          String?        @db.VarChar(500)
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  // 关系
+  enterprise    Enterprise @relation(fields: [enterpriseId], references: [id])
+
+  @@unique([enterpriseId, freelancerId])
+  @@map("talent_pool")
+}
+
+enum TalentPoolTag {
+  favorite
+  blacklisted
+  cooperated
+}
+
+// ==================== MCP 开放平台 ====================
+
+model McpApp {
+  id            Int          @id @default(autoincrement())
+  name          String       @db.VarChar(100)
+  description   String?      @db.VarChar(500)
+  contactName   String       @map("contact_name") @db.VarChar(50)
+  contactEmail  String       @map("contact_email") @db.VarChar(200)
+  contactPhone  String?      @map("contact_phone") @db.VarChar(20)
+  status        McpAppStatus @default(pending)
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  // 关系
+  apiKeys        McpApiKey[]
+  balance        McpAppBalance?
+  billingRecords McpBillingRecord[]
+  usageLogs      McpUsageLog[]
+
+  @@map("mcp_apps")
+}
+
+enum McpAppStatus {
+  pending
+  approved
+  rejected
+  suspended
+}
+
+model McpApiKey {
+  id            Int           @id @default(autoincrement())
+  appId         Int           @map("app_id")
+  keyHash       String        @unique @map("key_hash") @db.VarChar(128)
+  keyPrefix     String        @map("key_prefix") @db.VarChar(12) // 前8位用于展示 kt_live_a1b2...
+  label         String?       @db.VarChar(100)
+  permissions   Json?         // 允许调用的 tool 列表，null = 全部
+  rateLimit     Int           @default(100) @map("rate_limit") // 次/分钟
+  status        McpKeyStatus  @default(active)
+  expiresAt     DateTime?     @map("expires_at")
+  lastUsedAt    DateTime?     @map("last_used_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  // 关系
+  app           McpApp        @relation(fields: [appId], references: [id])
+  usageLogs     McpUsageLog[]
+
+  @@map("mcp_api_keys")
+}
+
+enum McpKeyStatus {
+  active
+  revoked
+  expired
+}
+
+model McpUsageLog {
+  id            Int      @id @default(autoincrement())
+  appId         Int      @map("app_id")
+  keyId         Int      @map("key_id")
+  toolName      String   @map("tool_name") @db.VarChar(100)
+  requestParams Json?    @map("request_params")
+  responseCode  Int      @map("response_code")
+  durationMs    Int      @map("duration_ms")
+  billedAmount  Decimal  @default(0) @map("billed_amount") @db.Decimal(10, 4)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // 关系
+  app           McpApp    @relation(fields: [appId], references: [id])
+  key           McpApiKey @relation(fields: [keyId], references: [id])
+
+  @@index([appId, createdAt])
+  @@index([keyId, createdAt])
+  @@map("mcp_usage_logs")
+}
+
+model McpPricingPlan {
+  id            Int             @id @default(autoincrement())
+  name          String          @db.VarChar(100)
+  type          McpPricingType
+  pricePerCall  Decimal         @default(0) @map("price_per_call") @db.Decimal(10, 4) // 按次: 单价
+  monthlyPrice  Decimal         @default(0) @map("monthly_price") @db.Decimal(10, 2)  // 包月: 月费
+  freeQuota     Int             @default(0) @map("free_quota") // 免费额度(次)
+  description   String?         @db.VarChar(500)
+  isActive      Boolean         @default(true) @map("is_active")
+  createdAt     DateTime        @default(now()) @map("created_at")
+
+  @@map("mcp_pricing_plans")
+}
+
+enum McpPricingType {
+  per_call  // 按次计费
+  monthly   // 包月
+}
+
+model McpAppBalance {
+  id            Int      @id @default(autoincrement())
+  appId         Int      @unique @map("app_id")
+  balance       Decimal  @default(0) @db.Decimal(12, 2)
+  totalSpent    Decimal  @default(0) @map("total_spent") @db.Decimal(12, 2)
+  totalRecharged Decimal @default(0) @map("total_recharged") @db.Decimal(12, 2)
+  freeRemaining Int      @default(0) @map("free_remaining") // 剩余免费次数
+  planId        Int?     @map("plan_id")
+  planExpiresAt DateTime? @map("plan_expires_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // 关系
+  app           McpApp   @relation(fields: [appId], references: [id])
+
+  @@map("mcp_app_balances")
+}
+
+model McpBillingRecord {
+  id            Int              @id @default(autoincrement())
+  appId         Int              @map("app_id")
+  type          McpBillingType
+  amount        Decimal          @db.Decimal(12, 2)
+  balanceAfter  Decimal          @map("balance_after") @db.Decimal(12, 2)
+  remark        String?          @db.VarChar(500)
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  // 关系
+  app           McpApp           @relation(fields: [appId], references: [id])
+
+  @@index([appId, createdAt])
+  @@map("mcp_billing_records")
+}
+
+enum McpBillingType {
+  recharge    // 充值
+  deduction   // 扣费
+  refund      // 退款
+  plan_purchase // 套餐购买
+}

@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>灵工通 · 劳动者端</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+      background: #f5f6f8; color: #333; max-width: 480px; margin: 0 auto; min-height: 100vh;
+      padding-bottom: 70px;
+    }
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 480px; background: #fff; display: flex;
+      border-top: 1px solid #eee; z-index: 100; padding: 6px 0 env(safe-area-inset-bottom);
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      padding: 8px 0; cursor: pointer; color: #999; font-size: 10px; gap: 4px;
+      transition: color 0.2s; user-select: none;
+    }
+    .nav-item.active { color: #1677ff; }
+    .nav-item svg { width: 22px; height: 22px; }
+    .page-header {
+      padding: 16px; background: linear-gradient(135deg, #1677ff, #4096ff);
+      color: #fff; position: sticky; top: 0; z-index: 50;
+    }
+    .page-header h1 { font-size: 18px; font-weight: 700; }
+    .page-header p { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+    .card {
+      background: #fff; border-radius: 12px; margin: 12px 16px; padding: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .card-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+    .task-item {
+      padding: 16px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background 0.15s;
+    }
+    .task-item:hover { background: #fafafa; }
+    .task-item:last-child { border-bottom: none; }
+    .task-name { font-size: 15px; font-weight: 600; color: #333; margin-bottom: 4px; }
+    .task-company { font-size: 12px; color: #999; margin-bottom: 8px; }
+    .task-meta { display: flex; gap: 12px; flex-wrap: wrap; }
+    .task-tag { font-size: 11px; padding: 3px 8px; border-radius: 4px; background: #f0f5ff; color: #1677ff; }
+    .task-budget { font-size: 14px; font-weight: 700; color: #1677ff; }
+    .task-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+      padding: 8px 20px; border-radius: 20px; font-size: 13px; font-weight: 600;
+      border: none; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-primary { background: #1677ff; color: #fff; }
+    .btn-primary:active { background: #0958d9; }
+    .btn-ghost { background: #f0f0f0; color: #666; }
+    .btn-success { background: #52c41a; color: #fff; }
+    .btn-sm { padding: 6px 14px; font-size: 12px; }
+    .btn-block { width: 100%; padding: 14px; font-size: 15px; border-radius: 8px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .input-group { margin-bottom: 16px; }
+    .input-group label { display: block; font-size: 13px; font-weight: 500; color: #666; margin-bottom: 6px; }
+    .input-group input, .input-group textarea {
+      width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px;
+      font-size: 15px; outline: none; transition: border-color 0.2s;
+    }
+    .input-group input:focus, .input-group textarea:focus { border-color: #1677ff; }
+    .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+    .badge-pending { background: #fff7e6; color: #fa8c16; }
+    .badge-accepted { background: #f6ffed; color: #52c41a; }
+    .badge-rejected { background: #fff1f0; color: #f5222d; }
+    .badge-open { background: #e6f7ff; color: #1677ff; }
+    .badge-progress { background: #e6fffb; color: #13c2c2; }
+    .login-page {
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 32px; background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
+    }
+    .login-card {
+      background: #fff; border-radius: 16px; padding: 32px 24px; width: 100%;
+      max-width: 360px; box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    }
+    .login-card h2 { text-align: center; font-size: 22px; margin-bottom: 8px; }
+    .login-card p { text-align: center; color: #999; font-size: 13px; margin-bottom: 24px; }
+    .code-row { display: flex; gap: 8px; }
+    .code-row input { flex: 1; }
+    .code-row .btn { white-space: nowrap; flex-shrink: 0; }
+    .empty { text-align: center; padding: 48px 20px; color: #999; }
+    .empty p { font-size: 14px; }
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.45); z-index: 200; align-items: flex-end; justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal-panel {
+      background: #fff; border-radius: 20px 20px 0 0; width: 100%; max-width: 480px;
+      max-height: 85vh; overflow-y: auto; padding: 24px 16px 32px;
+      animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .modal-header h3 { font-size: 17px; font-weight: 700; }
+    .modal-close {
+      width: 30px; height: 30px; border-radius: 50%; background: #f0f0f0;
+      border: none; font-size: 16px; cursor: pointer; display: flex;
+      align-items: center; justify-content: center; color: #666;
+    }
+    .progress-item {
+      padding: 12px; border-bottom: 1px solid #f0f0f0; font-size: 14px;
+    }
+    .progress-item:last-child { border-bottom: none; }
+    .progress-time { font-size: 11px; color: #999; margin-bottom: 4px; }
+    .progress-content { line-height: 1.6; }
+    .progress-media { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .progress-media img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; cursor: pointer; }
+    .progress-media video { width: 120px; border-radius: 8px; }
+    .progress-media a { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 4px 8px; background: #f0f5ff; color: #1677ff; border-radius: 4px; text-decoration: none; }
+    .upload-area {
+      border: 2px dashed #d9d9d9; border-radius: 8px; padding: 20px; text-align: center;
+      cursor: pointer; transition: border-color 0.2s; margin-bottom: 12px;
+    }
+    .upload-area:hover { border-color: #1677ff; }
+    .upload-area input { display: none; }
+    .upload-preview { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .upload-preview .preview-item {
+      position: relative; width: 60px; height: 60px; border-radius: 6px; overflow: hidden;
+    }
+    .upload-preview .preview-item img { width: 100%; height: 100%; object-fit: cover; }
+    .upload-preview .preview-item .remove-btn {
+      position: absolute; top: 2px; right: 2px; width: 18px; height: 18px;
+      background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 50%;
+      font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .file-tag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #f0f5ff; color: #1677ff; border-radius: 4px; font-size: 12px; margin: 4px 4px 4px 0; }
+    .toast { position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); color:#fff; padding:10px 24px; border-radius:20px; font-size:14px; z-index:10000; animation:toastIn .3s ease; white-space:nowrap; max-width:90%; text-align:center; }
+    .toast.success { background:#52c41a; }
+    .toast.error { background:#ff4d4f; }
+    .toast.warning { background:#faad14; color:#333; }
+    @keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(20px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+  </style>
+</head>
+<body>
+
+<div id="loginPage" class="login-page">
+  <div class="login-card">
+    <h2>灵工通</h2>
+    <p>劳动者端 · 手机号登录</p>
+    <div class="input-group">
+      <label>手机号</label>
+      <input type="tel" id="phoneInput" placeholder="请输入手机号" maxlength="11" />
+    </div>
+    <div class="input-group">
+      <label>验证码</label>
+      <div class="code-row">
+        <input type="text" id="codeInput" placeholder="请输入验证码" maxlength="6" />
+        <button class="btn btn-ghost" id="sendCodeBtn" onclick="sendCode()">获取验证码</button>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="login()">登录</button>
+  </div>
+</div>
+
+<div id="mainApp" style="display:none;">
+  <div class="page-header">
+    <h1 id="headerTitle">任务广场</h1>
+    <p id="headerSub">发现适合你的优质项目</p>
+  </div>
+  <section id="secMarket"></section>
+  <section id="secMyTasks" style="display:none;"></section>
+  <section id="secProfile" style="display:none;"></section>
+  <div class="bottom-nav">
+    <div class="nav-item active" data-tab="market" onclick="switchTab('market')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span>任务广场</span>
+    </div>
+    <div class="nav-item" data-tab="myTasks" onclick="switchTab('myTasks')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>
+      <span>我的任务</span>
+    </div>
+    <div class="nav-item" data-tab="profile" onclick="switchTab('profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>我的</span>
+    </div>
+  </div>
+</div>
+
+<!-- Task Detail Modal -->
+<div class="modal-overlay" id="taskDetailModal">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3 id="detailTitle"></h3>
+      <button class="modal-close" onclick="closeModal('taskDetailModal')">✕</button>
+    </div>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<!-- Work Modal (upload progress) -->
+<div class="modal-overlay" id="workModal">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3 id="workTitle">提交工作进度</h3>
+      <button class="modal-close" onclick="closeModal('workModal')">✕</button>
+    </div>
+    <div id="workContent"></div>
+  </div>
+</div>
+
+<script>
+  const API = '/api';
+  let token = localStorage.getItem('fl_token') || '';
+  let currentUser = JSON.parse(localStorage.getItem('fl_user') || 'null');
+  let pendingFiles = [];
+
+  function showToast(msg, type = '') {
+    const el = document.createElement('div');
+    el.className = 'toast' + (type ? ' ' + type : '');
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 2500);
+  }
+
+  // Auth
+  async function sendCode() {
+    const phone = document.getElementById('phoneInput').value.trim();
+    if (!/^1[3-9]\d{9}$/.test(phone)) return showToast('请输入正确的手机号', 'error');
+    const btn = document.getElementById('sendCodeBtn');
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${API}/auth/send-code`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
+      const data = await res.json();
+      if (data.code === 0) {
+        showToast('验证码已发送（开发环境：123456）', 'success');
+        let sec = 60;
+        const timer = setInterval(() => { sec--; btn.textContent = `${sec}s`; if (sec <= 0) { clearInterval(timer); btn.textContent = '获取验证码'; btn.disabled = false; } }, 1000);
+      } else { showToast(data.message, 'error'); btn.disabled = false; }
+    } catch { showToast('发送失败', 'error'); btn.disabled = false; }
+  }
+
+  async function login() {
+    const phone = document.getElementById('phoneInput').value.trim();
+    const code = document.getElementById('codeInput').value.trim();
+    if (!phone || !code) return showToast('请输入手机号和验证码', 'error');
+    try {
+      const res = await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, code, role: 'freelancer' }) });
+      const data = await res.json();
+      if (data.code === 0) {
+        token = data.data.token; currentUser = data.data.user;
+        localStorage.setItem('fl_token', token); localStorage.setItem('fl_user', JSON.stringify(currentUser));
+        showApp();
+      } else { showToast(data.message, 'error'); }
+    } catch { showToast('登录失败', 'error'); }
+  }
+
+  function logout() {
+    token = ''; currentUser = null;
+    localStorage.removeItem('fl_token'); localStorage.removeItem('fl_user');
+    document.getElementById('loginPage').style.display = 'flex';
+    document.getElementById('mainApp').style.display = 'none';
+  }
+
+  function authHeaders() { return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }; }
+  function authHeadersRaw() { return { 'Authorization': `Bearer ${token}` }; }
+
+  function showApp() {
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    switchTab('market');
+  }
+  if (token && currentUser) showApp();
+
+  function switchTab(tab) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.tab === tab));
+    document.getElementById('secMarket').style.display = tab === 'market' ? 'block' : 'none';
+    document.getElementById('secMyTasks').style.display = tab === 'myTasks' ? 'block' : 'none';
+    document.getElementById('secProfile').style.display = tab === 'profile' ? 'block' : 'none';
+    const h = document.getElementById('headerTitle'), s = document.getElementById('headerSub');
+    if (tab === 'market') { h.textContent = '任务广场'; s.textContent = '发现适合你的优质项目'; loadTasks(); }
+    if (tab === 'myTasks') { h.textContent = '我的任务'; s.textContent = '查看已录用和进行中的任务'; loadMyTasks(); }
+    if (tab === 'profile') { h.textContent = '个人中心'; s.textContent = ''; renderProfile(); }
+  }
+
+  // Market
+  async function loadTasks() {
+    const sec = document.getElementById('secMarket');
+    sec.innerHTML = '<div style="padding:20px;text-align:center;color:#999;">加载中...</div>';
+    try {
+      const res = await fetch(`${API}/public/tasks`);
+      const data = await res.json();
+      if (data.code === 0 && data.data.length > 0) {
+        sec.innerHTML = '<div class="card" style="padding:0;overflow:hidden;">' +
+          data.data.map(t => `
+            <div class="task-item" onclick="showTaskDetail(${t.id})">
+              <div class="task-name">${esc(t.name)}</div>
+              <div class="task-company">${esc(t.enterprise?.companyName || '企业用户')} · ${esc(t.type || '其他')}</div>
+              <div class="task-meta">
+                ${t.location ? `<span class="task-tag">${esc(t.location)}</span>` : ''}
+                ${t.duration ? `<span class="task-tag">${esc(t.duration)}</span>` : ''}
+                <span class="task-tag">${t.appliedCount || 0}人申请</span>
+              </div>
+              <div class="task-footer">
+                <span class="task-budget">¥${Number(t.budget).toLocaleString()}</span>
+                <span style="font-size:12px;color:#999;">需${t.peopleNeeded}人</span>
+              </div>
+            </div>`).join('') + '</div>';
+      } else { sec.innerHTML = '<div class="empty"><p>暂无公开任务</p></div>'; }
+    } catch(e) { sec.innerHTML = '<div class="empty"><p>加载失败，请重试</p></div>'; console.error(e); }
+  }
+
+  async function showTaskDetail(id) {
+    const modal = document.getElementById('taskDetailModal');
+    document.getElementById('detailTitle').textContent = '任务详情';
+    document.getElementById('detailContent').innerHTML = '<p style="color:#999;">加载中...</p>';
+    modal.classList.add('show');
+    try {
+      // 直接获取单个任务详情 + 申请状态
+      const [taskRes, appRes] = await Promise.all([
+        fetch(`${API}/public/tasks/${id}`),
+        fetch(`${API}/freelancer/applications`, { headers: authHeaders() }),
+      ]);
+      const taskData = await taskRes.json();
+      const appData = await appRes.json();
+      const task = taskData.data;
+      if (!task) { document.getElementById('detailContent').innerHTML = '<p>任务不存在</p>'; return; }
+
+      // Check if already applied
+      const myApp = (appData.data || []).find(a => a.task.id === id);
+      const appStatusMap = { pending: '待审核中', accepted: '已录用', rejected: '已拒绝', withdrawn: '已撤回' };
+      const appBadgeMap = { pending: 'badge-pending', accepted: 'badge-accepted', rejected: 'badge-rejected', withdrawn: 'badge-pending' };
+
+      let actionHtml;
+      if (myApp) {
+        actionHtml = `<div style="text-align:center;padding:14px;background:#f9f9f9;border-radius:8px;">
+          <span class="badge ${appBadgeMap[myApp.status]}" style="font-size:14px;padding:6px 20px;">${appStatusMap[myApp.status] || myApp.status}</span>
+          <div style="font-size:12px;color:#999;margin-top:8px;">申请时间：${new Date(myApp.createdAt).toLocaleString('zh-CN')}</div>
+        </div>`;
+      } else {
+        actionHtml = `<button class="btn btn-primary btn-block" onclick="applyTask(${id})">立即申请</button>`;
+      }
+
+      const companyName = task.enterprise?.companyName || task.companyName || '企业用户';
+      const reqs = Array.isArray(task.requirements) ? task.requirements : [];
+      document.getElementById('detailTitle').textContent = task.name;
+      document.getElementById('detailContent').innerHTML = `
+        <div style="margin-bottom:16px;">
+          <div style="font-size:13px;color:#999;margin-bottom:4px;">${esc(companyName)}</div>
+          <div style="font-size:22px;font-weight:700;color:#1677ff;">¥${Number(task.budget).toLocaleString()}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+          ${task.type ? `<span class="task-tag">${esc(task.type)}</span>` : ''}
+          ${task.location ? `<span class="task-tag">${esc(task.location)}</span>` : ''}
+          ${task.duration ? `<span class="task-tag">${esc(task.duration)}</span>` : ''}
+          <span class="task-tag">需${task.peopleNeeded}人</span>
+        </div>
+        ${task.description ? `<div style="margin-bottom:16px;"><div class="card-title">任务描述</div><p style="font-size:14px;line-height:1.8;color:#555;">${esc(task.description)}</p></div>` : ''}
+        ${reqs.length ? `<div style="margin-bottom:16px;"><div class="card-title">技能要求</div><ul style="padding-left:18px;font-size:13px;color:#555;line-height:2;">${reqs.map(r => `<li>${esc(r)}</li>`).join('')}</ul></div>` : ''}
+        ${actionHtml}`;
+    } catch { document.getElementById('detailContent').innerHTML = '<p>加载失败</p>'; }
+  }
+
+  async function applyTask(id) {
+    const btn = event.target;
+    // First click: show confirm buttons
+    if (!btn.dataset.confirming) {
+      btn.dataset.confirming = 'true';
+      btn.textContent = '';
+      btn.style.display = 'none';
+      const wrapper = btn.parentElement;
+      const confirmDiv = document.createElement('div');
+      confirmDiv.id = 'applyConfirmDiv';
+      confirmDiv.style.cssText = 'display:flex;gap:10px;margin-top:0;';
+      confirmDiv.innerHTML = `
+        <button class="btn" style="flex:1;background:#f5f5f5;color:#333;font-size:15px;padding:12px;" onclick="cancelApply(this)">取消</button>
+        <button class="btn btn-primary" style="flex:1;font-size:15px;padding:12px;" onclick="doApply(${id}, this)">确认申请</button>
+      `;
+      wrapper.appendChild(confirmDiv);
+      return;
+    }
+  }
+
+  function cancelApply(btn) {
+    const confirmDiv = btn.closest('#applyConfirmDiv');
+    const wrapper = confirmDiv.parentElement;
+    confirmDiv.remove();
+    const applyBtn = wrapper.querySelector('[onclick^="applyTask"]');
+    if (applyBtn) {
+      applyBtn.style.display = '';
+      applyBtn.textContent = '立即申请';
+      delete applyBtn.dataset.confirming;
+    }
+  }
+
+  async function doApply(id, btn) {
+    btn.disabled = true;
+    btn.textContent = '申请中...';
+    try {
+      const res = await fetch(`${API}/freelancer/tasks/${id}/apply`, { method: 'POST', headers: authHeaders(), body: '{}' });
+      const data = await res.json();
+      if (data.code === 0) { showToast('申请成功！请等待企业审核', 'success'); closeModal('taskDetailModal'); }
+      else { showToast(data.message, 'error'); }
+    } catch { showToast('申请失败', 'error'); }
+    finally { btn.disabled = false; btn.textContent = '确认申请'; }
+  }
+
+  // My Tasks (accepted tasks)
+  async function loadMyTasks() {
+    const sec = document.getElementById('secMyTasks');
+    sec.innerHTML = '<div style="padding:20px;text-align:center;color:#999;">加载中...</div>';
+    try {
+      const res = await fetch(`${API}/freelancer/my-tasks`, { headers: authHeaders() });
+      const data = await res.json();
+
+      // Also load pending applications
+      const appRes = await fetch(`${API}/freelancer/applications`, { headers: authHeaders() });
+      const appData = await appRes.json();
+      const pendingApps = (appData.data || []).filter(a => a.status === 'pending');
+
+      let html = '';
+
+      // Accepted tasks section
+      if (data.code === 0 && data.data.length > 0) {
+        html += '<div class="card"><div class="card-title">我的任务</div>';
+        html += data.data.map(item => {
+          const statusLabel = item.task.status === 'waiting_confirmation' ? '待验收' : item.task.status === 'completed' ? '已完成' : '执行中';
+          const badgeClass = item.task.status === 'waiting_confirmation' ? 'badge-pending' : item.task.status === 'completed' ? 'badge-accepted' : 'badge-progress';
+          const btnLabel = item.task.status === 'waiting_confirmation' ? '查看记录' : item.task.status === 'completed' ? '查看详情' : '提交材料';
+          return `
+          <div class="task-item" onclick="openWorkModal(${item.task.id}, '${esc(item.task.name)}', '${item.task.status}')">
+            <div style="display:flex;justify-content:space-between;align-items:start;">
+              <div class="task-name">${esc(item.task.name)}</div>
+              <span class="badge ${badgeClass}">${statusLabel}</span>
+            </div>
+            <div class="task-company">${esc(item.task.companyName)} · ${esc(item.task.type || '其他')}</div>
+            <div class="task-footer">
+              <span class="task-budget">¥${Number(item.task.budget).toLocaleString()}</span>
+              <span class="btn btn-primary btn-sm">${btnLabel}</span>
+            </div>
+            ${item.task.progressUpdates.length > 0 ? `
+              <div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0f0f0;">
+                <div style="font-size:11px;color:#999;">最近进度：${item.task.progressUpdates[0].content.slice(0, 50)}...</div>
+              </div>` : ''}
+          </div>`}).join('');
+        html += '</div>';
+      }
+
+      // Pending applications
+      if (pendingApps.length > 0) {
+        html += '<div class="card"><div class="card-title">待审核申请</div>';
+        html += pendingApps.map(a => `
+          <div class="task-item">
+            <div style="display:flex;justify-content:space-between;align-items:start;">
+              <div class="task-name">${esc(a.task.name)}</div>
+              <span class="badge badge-pending">待审核</span>
+            </div>
+            <div class="task-company">${esc(a.task.companyName)}</div>
+            <div class="task-footer">
+              <span class="task-budget">¥${Number(a.task.budget).toLocaleString()}</span>
+              <span style="font-size:12px;color:#999;">${a.createdAt.slice(0,10)}</span>
+            </div>
+          </div>`).join('');
+        html += '</div>';
+      }
+
+      if (!html) html = '<div class="empty"><p>暂无任务，去任务广场看看吧</p></div>';
+      sec.innerHTML = html;
+    } catch(e) { sec.innerHTML = '<div class="empty"><p>加载失败</p></div>'; console.error(e); }
+  }
+
+  // Work Modal
+  function openWorkModal(taskId, taskName, taskStatus) {
+    pendingFiles = [];
+    const modal = document.getElementById('workModal');
+    document.getElementById('workTitle').textContent = taskName;
+
+    const isWaiting = taskStatus === 'waiting_confirmation';
+    const isCompleted = taskStatus === 'completed';
+    const canWork = !isWaiting && !isCompleted; // 只要不是待验收/已完成，都可以提交
+
+    let formHtml = '';
+    if (canWork) {
+      formHtml = `
+        <div class="input-group">
+          <label>工作内容描述</label>
+          <textarea id="progressText" rows="4" placeholder="描述您的工作进展..."></textarea>
+        </div>
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+          <input type="file" id="fileInput" multiple accept="image/*,video/*,.doc,.docx,.xls,.xlsx,.pdf,.txt" onchange="handleFiles(this.files)" />
+          <div style="color:#999;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5" style="margin-bottom:8px;">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <div>点击上传文件</div>
+            <div style="font-size:11px;margin-top:4px;">支持图片、视频、Word、Excel、PDF</div>
+          </div>
+        </div>
+        <div id="filePreview" class="upload-preview"></div>
+        <button class="btn btn-primary btn-block" onclick="submitProgress(${taskId})" id="submitProgressBtn">提交材料</button>
+        <div style="margin-top:12px;">
+          <button class="btn btn-block" style="background:#ff7a45;color:#fff;font-size:15px;" onclick="requestSettlement(${taskId})">
+            ✅ 任务完成，申请结算
+          </button>
+        </div>`;
+    } else if (isWaiting) {
+      formHtml = `
+        <div style="text-align:center;padding:20px;background:#fff7e6;border-radius:8px;margin-bottom:16px;">
+          <div style="font-size:32px;margin-bottom:8px;">⏳</div>
+          <div style="font-size:15px;font-weight:600;color:#fa8c16;">已申请结算，等待企业审核</div>
+          <div style="font-size:12px;color:#999;margin-top:4px;">企业审核通过后将进入结算流程</div>
+        </div>`;
+    } else if (isCompleted) {
+      formHtml = `
+        <div style="text-align:center;padding:20px;background:#f6ffed;border-radius:8px;margin-bottom:16px;">
+          <div style="font-size:32px;margin-bottom:8px;">🎉</div>
+          <div style="font-size:15px;font-weight:600;color:#52c41a;">任务已完成</div>
+          <div style="font-size:12px;color:#999;margin-top:4px;">企业已确认验收，结算中</div>
+        </div>`;
+    }
+
+    document.getElementById('workContent').innerHTML = formHtml + `
+      <div style="margin-top:24px;" id="progressHistory">
+        <div class="card-title">提交记录</div>
+        <div style="color:#999;font-size:13px;">加载中...</div>
+      </div>
+    `;
+    modal.classList.add('show');
+    loadProgressHistory(taskId);
+  }
+
+  function handleFiles(files) {
+    for (const f of files) {
+      pendingFiles.push(f);
+    }
+    renderFilePreview();
+  }
+
+  function removeFile(idx) {
+    pendingFiles.splice(idx, 1);
+    renderFilePreview();
+  }
+
+  function renderFilePreview() {
+    const container = document.getElementById('filePreview');
+    if (!container) return;
+    container.innerHTML = pendingFiles.map((f, i) => {
+      if (f.type.startsWith('image/')) {
+        const url = URL.createObjectURL(f);
+        return `<div class="preview-item"><img src="${url}" /><button class="remove-btn" onclick="removeFile(${i})">✕</button></div>`;
+      }
+      return `<span class="file-tag">${esc(f.name)} <span style="cursor:pointer;margin-left:4px;" onclick="removeFile(${i})">✕</span></span>`;
+    }).join('');
+  }
+
+  async function submitProgress(taskId) {
+    const text = document.getElementById('progressText').value.trim();
+    if (!text) return showToast('请输入工作内容', 'warning');
+    const btn = document.getElementById('submitProgressBtn');
+    btn.disabled = true; btn.textContent = '提交中...';
+
+    try {
+      let mediaUrls = [];
+
+      // Upload files first
+      if (pendingFiles.length > 0) {
+        const formData = new FormData();
+        pendingFiles.forEach(f => formData.append('files', f));
+        const uploadRes = await fetch(`${API}/freelancer/upload`, { method: 'POST', headers: authHeadersRaw(), body: formData });
+        const uploadData = await uploadRes.json();
+        if (uploadData.code === 0) mediaUrls = uploadData.data.urls;
+      }
+
+      const res = await fetch(`${API}/freelancer/tasks/${taskId}/progress`, {
+        method: 'POST', headers: authHeaders(),
+        body: JSON.stringify({ content: text, mediaUrls }),
+      });
+      const data = await res.json();
+      if (data.code === 0) {
+        showToast('提交成功！', 'success');
+        pendingFiles = [];
+        document.getElementById('progressText').value = '';
+        renderFilePreview();
+        loadProgressHistory(taskId);
+      } else { showToast(data.message, 'error'); }
+    } catch { showToast('提交失败', 'error'); }
+    finally { btn.disabled = false; btn.textContent = '提交材料'; }
+  }
+
+  function requestSettlement(taskId) {
+    const btn = event.target;
+    if (!btn.dataset.confirming) {
+      btn.dataset.confirming = 'true';
+      btn.style.display = 'none';
+      const wrapper = btn.parentElement;
+      const confirmDiv = document.createElement('div');
+      confirmDiv.id = 'settlementConfirmDiv';
+      confirmDiv.style.cssText = 'display:flex;gap:10px;margin-top:0;';
+      confirmDiv.innerHTML = `
+        <button class="btn" style="flex:1;background:#f5f5f5;color:#333;font-size:14px;padding:10px;" onclick="cancelSettlement(this)">取消</button>
+        <button class="btn" style="flex:1;background:#ff7a45;color:#fff;font-size:14px;padding:10px;" onclick="doSettlement(${taskId}, this)">确认申请结算</button>
+      `;
+      wrapper.appendChild(confirmDiv);
+      return;
+    }
+  }
+
+  function cancelSettlement(btn) {
+    const confirmDiv = btn.closest('#settlementConfirmDiv');
+    const wrapper = confirmDiv.parentElement;
+    confirmDiv.remove();
+    const origBtn = wrapper.querySelector('[onclick^="requestSettlement"]');
+    if (origBtn) { origBtn.style.display = ''; delete origBtn.dataset.confirming; }
+  }
+
+  async function doSettlement(taskId, btn) {
+    btn.disabled = true; btn.textContent = '提交中...';
+    try {
+      const res = await fetch(`${API}/freelancer/tasks/${taskId}/request-settlement`, { method: 'POST', headers: authHeaders() });
+      const data = await res.json();
+      if (data.code === 0) {
+        showToast(data.message || '已申请结算', 'success');
+        closeModal('workModal');
+        loadMyTasks();
+      } else { showToast(data.message, 'error'); }
+    } catch { showToast('操作失败', 'error'); }
+    finally { btn.disabled = false; btn.textContent = '确认申请结算'; }
+  }
+
+  async function loadProgressHistory(taskId) {
+    const container = document.getElementById('progressHistory');
+    if (!container) return;
+    try {
+      const res = await fetch(`${API}/freelancer/my-tasks`, { headers: authHeaders() });
+      const data = await res.json();
+      const taskItem = data.data.find(item => item.task.id === taskId);
+      const updates = taskItem?.task?.progressUpdates || [];
+      if (updates.length === 0) {
+        container.innerHTML = '<div class="card-title">历史进度</div><div style="color:#999;font-size:13px;text-align:center;padding:16px;">暂无进度记录</div>';
+        return;
+      }
+      container.innerHTML = '<div class="card-title">历史进度</div>' + updates.map(u => `
+        <div class="progress-item">
+          <div class="progress-time">${new Date(u.createdAt).toLocaleString('zh-CN')}</div>
+          <div class="progress-content">${esc(u.content)}</div>
+          ${u.mediaUrls && u.mediaUrls.length ? `
+            <div class="progress-media">
+              ${u.mediaUrls.map(url => {
+                const full = url.startsWith('http') ? url : location.origin + url;
+                if (/\.(jpg|jpeg|png|gif|webp)$/i.test(url)) return `<img src="${full}" onclick="window.open('${full}')" />`;
+                if (/\.(mp4|webm|mov)$/i.test(url)) return `<video src="${full}" controls></video>`;
+                return `<a href="${full}" target="_blank">📄 ${url.split('/').pop()}</a>`;
+              }).join('')}
+            </div>` : ''}
+        </div>`).join('');
+    } catch { container.innerHTML = '<div class="card-title">历史进度</div><div style="color:#999;">加载失败</div>'; }
+  }
+
+  // Profile
+  async function renderProfile() {
+    const sec = document.getElementById('secProfile');
+    sec.innerHTML = '<div style="padding:20px;text-align:center;color:#999;">加载中...</div>';
+    let profile = {};
+    try {
+      const res = await fetch(`${API}/freelancer/profile`, { headers: authHeaders() });
+      const data = await res.json();
+      if (data.code === 0) profile = data.data || {};
+    } catch {}
+    const skills = Array.isArray(profile.skills) ? profile.skills.join('、') : '';
+    sec.innerHTML = `
+      <div class="card" style="text-align:center;">
+        <div style="width:64px;height:64px;border-radius:50%;background:#e6f7ff;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1677ff" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div style="font-size:17px;font-weight:700;">${esc(profile.displayName || currentUser?.displayName || '用户')}</div>
+        <div style="font-size:13px;color:#999;margin-top:4px;">${esc(profile.phone || currentUser?.phone || '')}</div>
+        <div style="margin-top:4px;"><span class="badge badge-open">劳动者</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📋 简历信息（完善信息有利于接单）</div>
+        <div class="input-group">
+          <label>姓名/昵称</label>
+          <input id="pName" value="${esc(profile.displayName || '')}" placeholder="请输入您的姓名" />
+        </div>
+        <div class="input-group">
+          <label>个人简介</label>
+          <textarea id="pBio" rows="3" placeholder="简单介绍下自己的专长和经验...">${esc(profile.bio || '')}</textarea>
+        </div>
+        <div class="input-group">
+          <label>技能标签（用顿号分隔，如：UI设计、前端开发、数据分析）</label>
+          <input id="pSkills" value="${esc(skills)}" placeholder="UI设计、PS、Figma" />
+        </div>
+        <div class="input-group">
+          <label>工作经验</label>
+          <textarea id="pExp" rows="3" placeholder="描述您的工作经历...">${esc(profile.experience || '')}</textarea>
+        </div>
+        <div class="input-group">
+          <label>学历</label>
+          <input id="pEdu" value="${esc(profile.education || '')}" placeholder="如：本科 · 计算机科学" />
+        </div>
+        <div class="input-group">
+          <label>所在城市</label>
+          <input id="pLoc" value="${esc(profile.location || '')}" placeholder="如：上海" />
+        </div>
+        <div class="input-group">
+          <label>期望时薪（元）</label>
+          <input id="pRate" type="number" value="${profile.hourlyRate || ''}" placeholder="如：100" />
+        </div>
+        <button class="btn btn-primary btn-block" onclick="saveProfile()">保存简历</button>
+      </div>
+      <div class="card">
+        <div class="task-item" style="border:none;padding:12px 0;" onclick="logout()">
+          <div style="display:flex;align-items:center;gap:10px;color:#f5222d;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <span style="font-weight:600;">退出登录</span>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  async function saveProfile() {
+    const skillsStr = document.getElementById('pSkills').value.trim();
+    const skills = skillsStr ? skillsStr.split(/[、,，]/).map(s => s.trim()).filter(Boolean) : [];
+    const body = {
+      displayName: document.getElementById('pName').value.trim() || undefined,
+      bio: document.getElementById('pBio').value.trim() || undefined,
+      skills: skills.length > 0 ? skills : undefined,
+      experience: document.getElementById('pExp').value.trim() || undefined,
+      education: document.getElementById('pEdu').value.trim() || undefined,
+      location: document.getElementById('pLoc').value.trim() || undefined,
+      hourlyRate: parseFloat(document.getElementById('pRate').value) || undefined,
+    };
+    try {
+      const res = await fetch(`${API}/freelancer/profile`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) });
+      const data = await res.json();
+      if (data.code === 0) { showToast('简历保存成功！', 'success'); }
+      else { showToast(data.message || '保存失败', 'error'); }
+    } catch { showToast('保存失败', 'error'); }
+  }
+
+  // Utils
+  function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+  document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); }));
+</script>
+</body>
+</html>
