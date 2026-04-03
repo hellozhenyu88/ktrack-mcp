@@ -5,7 +5,7 @@ export default function Pricing() {
     return (
         <section className="section" style={{ paddingTop: 120 }}>
             <h2 className="section-title">透明定价，按需付费</h2>
-            <p className="section-subtitle">注册即送 100 次免费调用额度</p>
+            <p className="section-subtitle">注册即送 3 次免费调用额度</p>
 
             <div className="pricing-grid">
                 {/* 免费版 */}
@@ -14,7 +14,7 @@ export default function Pricing() {
                     <div className="price">免费</div>
                     <p style={{ color: '#94a3b8', fontSize: 14 }}>适合评估和测试</p>
                     <ul>
-                        <li>100 次免费调用</li>
+                        <li>3 次免费调用</li>
                         <li>所有 7 个 MCP Tools</li>
                         <li>所有 5 个 Resources</li>
                         <li>基础用量监控</li>
@@ -69,7 +69,7 @@ export default function Pricing() {
                 <div style={{ marginTop: 32 }}>
                     {[
                         { q: '什么是 MCP？', a: 'MCP（Model Context Protocol）是由 Anthropic 提出的开放协议，让 AI 应用可以安全地调用外部工具和数据。灵工通通过 MCP 暴露用工管理能力，你的 AI 应用可以直接发任务、找人才。' },
-                        { q: '免费额度用完后怎么计费？', a: '免费 100 次用完后，按选择的方案计费。按次版每次调用 ¥0.10，从账户余额中扣除。企业版享有每月 50,000 次包含额度。' },
+                        { q: '免费额度用完后怎么计费？', a: '免费 3 次用完后，按选择的方案计费。按次版每次调用 ¥0.10，从账户余额中扣除。企业版享有每月 50,000 次包含额度。' },
                         { q: 'API Key 安全吗？', a: 'API Key 在服务器端使用 SHA-256 哈希存储，传输过程使用 HTTPS 加密。建议设置环境变量存储 Key，不要硬编码在代码中。' },
                         { q: '是否支持 Claude Desktop / Cursor？', a: '支持！所有兼容 MCP 协议的 AI 客户端均可使用，包括 Claude Desktop、Cursor、以及自定义的 MCP 客户端集成。' },
                     ].map(item => (

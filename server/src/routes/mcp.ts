@@ -30,9 +30,9 @@ router.post('/apps/register', async (req: Request, res: Response) => {
         data: { ...parsed.data, status: 'approved' },
     });
 
-    // 创建余额账户，赠送 100 次免费额度
+    // 创建余额账户，赠送 3 次免费额度
     await prisma.mcpAppBalance.create({
-        data: { appId: app.id, balance: 0, freeRemaining: 100 },
+        data: { appId: app.id, balance: 0, freeRemaining: 3 },
     });
 
     // 立即生成 API Key
@@ -56,7 +56,7 @@ router.post('/apps/register', async (req: Request, res: Response) => {
             status: 'approved',
             apiKey: raw,    // ⚠️ 只返回一次明文
             keyPrefix: prefix,
-            freeQuota: 100,
+            freeQuota: 3,
         },
     });
 });

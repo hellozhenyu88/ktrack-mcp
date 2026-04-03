@@ -30,7 +30,7 @@ TimeLinker MCP 是一个基于 **[Model Context Protocol (MCP)](https://modelcon
 | 📂 **5 个 MCP Resources** | 任务列表、任务详情、仪表盘、人才库、交易记录 |
 | 💰 **内置计费系统** | API Key 认证、调用量计量、免费额度 + 余额扣费 |
 | 🛡️ **合规结算** | 代扣个税、合规开票、资金清算 |
-| 🎁 **免费体验** | 新用户赠送 100 次免费调用额度 |
+| 🎁 **免费体验** | 新用户赠送 3 次免费调用额度 |
 
 ### 工作流示意
 
@@ -162,7 +162,7 @@ async def main():
                 "name": "春熙路商圈实地拍摄",
                 "type": "摄影服务",
                 "description": "需要一位摄影师前往春熙路商圈拍摄 20 张实景照片，用于商业宣传",
-                "requirements": "有商业摄影经验，自备相机",
+                "requirements": ["有商业摄影经验", "自备相机"],
                 "budget": 200,
                 "peopleNeeded": 1,
                 "duration": "1天",
@@ -279,13 +279,13 @@ await client.close();
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `name` | string | ✅ | 任务名称 |
-| `type` | string | ✅ | 任务类型（如：摄影服务、软件开发、配送） |
-| `description` | string | ✅ | 任务详细描述 |
-| `requirements` | string | ❌ | 技能要求 |
+| `type` | string | ❌ | 任务类型（如：摄影服务、软件开发、配送） |
+| `description` | string | ❌ | 任务详细描述 |
+| `requirements` | string[] | ❌ | 技能要求列表（如：["摄影经验", "自备相机"]） |
 | `budget` | number | ✅ | 预算金额（元） |
 | `peopleNeeded` | number | ✅ | 需要人数 |
-| `duration` | string | ✅ | 预计工期（如：1天、2周） |
-| `location` | string | ✅ | 工作地点（如：成都市锦江区、远程） |
+| `duration` | string | ❌ | 预计工期（如：1天、2周） |
+| `location` | string | ❌ | 工作地点（如：成都市锦江区、远程） |
 | `enterpriseId` | number | ✅ | 企业 ID |
 
 **调用示例：**
@@ -296,7 +296,7 @@ await client.close();
     "name": "春熙路商圈实地拍摄",
     "type": "摄影服务",
     "description": "拍摄 20 张商业实景照片",
-    "requirements": "有商业摄影经验",
+    "requirements": ["有商业摄影经验"],
     "budget": 200,
     "peopleNeeded": 1,
     "duration": "1天",
@@ -420,7 +420,7 @@ Authorization: Bearer kt_live_你的API_KEY
 | Key 格式 | `kt_live_` 前缀 + 随机字符串 |
 | 获取方式 | [申请页面](https://mcp.timelinker.cn/apply) 提交后即时获取 |
 | 使用限制 | 每分钟 100 次请求（可升级） |
-| 免费额度 | 注册即送 100 次调用 |
+| 免费额度 | 注册即送 3 次调用 |
 
 ---
 
@@ -428,7 +428,7 @@ Authorization: Bearer kt_live_你的API_KEY
 
 | 方案 | 价格 | 说明 |
 |------|------|------|
-| 🎁 免费体验 | ¥0 | 注册即送 100 次 MCP 调用 |
+| 🎁 免费体验 | ¥0 | 注册即送 3 次 MCP 调用 |
 | 💳 按量付费 | 服务费 = 任务预算 × 8%（最低 ¥10/次） | 仅在发布任务时收取 |
 | 🏢 企业版 | 联系我们 | 更高调用限额、专属技术支持 |
 

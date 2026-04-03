@@ -230,7 +230,7 @@ export default function Apply() {
     return (
         <section className="section" style={{ paddingTop: 120 }}>
             <h2 className="section-title">获取 API Key</h2>
-            <p className="section-subtitle">填写信息后即刻获取 API Key，附赠 100 次免费调用额度</p>
+            <p className="section-subtitle">填写信息后即刻获取 API Key，附赠 3 次免费调用额度</p>
 
             <div style={{
                 maxWidth: 600, margin: '0 auto',
@@ -270,7 +270,7 @@ export default function Apply() {
                     </Form.Item>
 
                     <p style={{ textAlign: 'center', marginTop: 16, fontSize: 13, color: '#64748b' }}>
-                        注册即送 100 次免费调用，无需审核，即刻可用
+                        注册即送 3 次免费调用，无需审核，即刻可用
                     </p>
                 </Form>
             </div>
